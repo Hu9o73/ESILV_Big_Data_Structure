@@ -71,6 +71,12 @@ OL - #IDC    | Coll=OrderLine  | docs/server=4,000,000.0 | distinct-values/serve
 
 The full output enumerates every layout (DB1–DB5) and all shard key scenarios.
 
+## Sharding strategy observations
+
+- **Stock#IDP vs Stock#IDW** – Both shard keys distribute the same 20 M stock documents, but `#IDP` yields ~100 distinct products per server while `#IDW` only sees 0.2 warehouses/server, meaning almost every write would pile onto just 200 shards. Product ID therefore keeps load balanced; warehouse ID would cause severe hotspotting.
+- **OrderLine#IDC vs OrderLine#IDP** – Order lines are plentiful (4 B docs) and both keys fan out well across 1,000 servers, but `#IDC` carries 10,000 distinct clients/server, delivering better randomness for client-centric queries and reducing the chance two clients lock the same shard. `#IDP` remains viable for product analytics, yet the 100 values/server signal a mild skew risk for very popular items.
+- **Product#IDP vs Product#brand** – With only 100 products/server, both keys keep shard sizes tiny, but `#brand` has just five distinct values/server, so a few high-volume brands would dominate their shards. Sticking to the primary key keeps uniform distribution and simplifies range-based routing.
+
 ## Customizing scenarios
 
 - **Change dataset scale** by editing `Stats` in `src/app/constants.py` (e.g., number of warehouses, brands, or order lines). Derived counts such as `N_STOCK` update automatically.
