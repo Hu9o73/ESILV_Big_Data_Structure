@@ -7,6 +7,10 @@ STRING_B = 80      # "String"
 DATE_B = 20        # "Date" -> specific string
 LONGSTRING_B = 200 # "LongString"
 KV_OVERHEAD_B = 12 # Key+Value pairs / Arrays : 12B + values
+READ_BW_BPS = 100 * 1024 * 1024  # assume 100MB/s sequential read throughput
+NETWORK_LATENCY_S = 0.002        # simple per-shard roundtrip penalty (s)
+CARBON_PER_GB = 0.05             # kgCO2e per GB scanned (rough proxy)
+PRICE_PER_GB = 0.02              # $ per GB scanned (rough proxy)
 
 @dataclass(frozen=True)
 class Infra:
@@ -21,11 +25,18 @@ class Stats:
     N_WAREHOUSES: int = 200             # 200 warehouses
     N_BRANDS: int = 5_000               # 5,000 distinct brands
     N_APPLE_PRODUCTS: int = 50          # 50 Apple products
+    AVG_ORDERS_PER_CLIENT: int = 100    # average number of orders per client
+    AVG_PRODUCTS_PER_CLIENT: int = 20   # average distinct products per client
+    AVG_ORDERLINES_PER_ORDER: int = 4   # inferred from totals (4B OL / 100 orders/client)
     # Derived:
     @property
     def N_STOCK(self) -> int:
         # For a stock, even if quantity is 0, an instance exists per (product, warehouse)
         return self.N_PRODUCTS * self.N_WAREHOUSES
+
+    @property
+    def ORDERLINES_PER_CLIENT(self) -> int:
+        return self.N_ORDERLINES // self.N_CLIENTS
 
 # Average cardinalities used for array fields during sizing
 @dataclass(frozen=True)

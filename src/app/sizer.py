@@ -82,3 +82,25 @@ def db_sizes(layout: Dict[str, Dict[str, Any]], stats: Stats) -> Tuple[int, Dict
         coll_sizes[coll] = csz
         total += csz
     return total, doc_sizes, coll_sizes
+
+
+def doc_size_bytes(schema: Dict[str, Any]) -> int:
+    """
+    Public helper that wraps the internal sizing routine so operators can reuse it.
+    """
+    return _size_of_schema(schema)
+
+
+def projection_size(schema: Dict[str, Any], fields) -> int:
+    """
+    Approximate the size of a projected document by summing requested top-level fields.
+    Unknown fields are ignored deliberately.
+    """
+    if schema["type"] != "object":
+        return doc_size_bytes(schema)
+    total = 0
+    for f in fields:
+        sub = schema["fields"].get(f)
+        if sub:
+            total += doc_size_bytes(sub)
+    return total if total > 0 else doc_size_bytes(schema)
